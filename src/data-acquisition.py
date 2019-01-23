@@ -1,8 +1,11 @@
 #!/usr/bin/env python
 import bme680
 import time
+import datetime
 from plotDataEInk import plotData 
 from statistics import mean 
+import rfc3339 
+import json
 
 SAMPLE_EVERY_SECONDS = 10
 REGISTERS_TO_KEEP = 720
@@ -19,6 +22,18 @@ temp_tendency = " ="
 hum_tendency = " ="
 pres_tendency = " ="
 first_data_available = False
+
+#Init database
+from influxdb import InfluxDBClient
+try:
+	client = InfluxDBClient(host='localhost', port=8086)
+except:
+	raise NameError('The service is not running! -> sudo service influxdb start')
+try:
+	client.switch_database('weatherDataBase')
+except:
+	client.create_database('weatherDataBase')
+	client.switch_database('weatherDataBase')
 
 print("""Display Temperature, Pressure, Humidity and Gas
 Press Ctrl+C to exit
@@ -57,16 +72,6 @@ for name in dir(sensor.data):
 
     if not name.startswith('_'):
         print('{}: {}'.format(name, value))
-
-#sensor.set_gas_heater_temperature(320)
-#sensor.set_gas_heater_duration(150)
-#sensor.select_gas_heater_profile(0)
-
-
-# Up to 10 heater profiles can be configured, each
-# with their own temperature and duration.
-# sensor.set_gas_heater_profile(200, 150, nb_profile=1)
-# sensor.select_gas_heater_profile(1)
 
 iterations = 0
 
@@ -116,30 +121,37 @@ def calculate_tendency (T,P,H):
         else:
             hum_tendency = " ="
 
-
-print('\n\nPolling:')
 try:
     while True:
         if sensor.get_sensor_data():
-	    output = '{0:.2f} C,{1:.2f} hPa,{2:.2f} %RH'.format(
-                sensor.data.temperature,
-                sensor.data.pressure,
-                sensor.data.humidity)
-	    
 	    calculate_tendency (sensor.data.temperature,sensor.data.pressure,sensor.data.humidity)
-            if sensor.data.heat_stable:
-                print('{0},{1} Ohms'.format(
-                    output,
-                    sensor.data.gas_resistance))
-            else:
-                print(output)
+	    timestamp = time.time()
+	    d = datetime.datetime.fromtimestamp(timestamp)
+	    timestring = rfc3339(d, utc=True, use_system_timezone=False)
+	
+	    json_body = [
+	    {
+		"measurement": "WeatherData",
+		"tags": {
+		    "user": "Txema",
+		    "sensor1": "BME680"
+		},
+		"time": timestring,
+		"fields": {
+		    "temperature": sensor.data.temperature
+		    "pressure": sensor.data.pressure
+	 	    "humidity": sensor.data.humidity
+		}
+	    }]
+	    print json_body
 
-	if (iterations % 30) == 0: 
-	   		
+	if (iterations % 30) == 0: 	   		
 	    plotData(["T: " , '{0:.2f} C'.format(sensor.data.temperature), temp_tendency, 
 	    	    "H: ", '{0:.2f} %'.format(sensor.data.humidity), hum_tendency,
 		    "P: ", '{0:.2f} hPa'.format(sensor.data.pressure), pres_tendency])
 	    iterations = 0;
+	
+	
         time.sleep(SAMPLE_EVERY_SECONDS)
 	iterations += 1
 
