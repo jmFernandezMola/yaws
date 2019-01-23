@@ -21,3 +21,6 @@ All the information can be found in: https://www.influxdata.com/blog/running-the
 Start the influx db service: `sudo service influxdb start`
 Take a look on the following web: https://www.influxdata.com/blog/getting-started-python-influxdb/
 
+## Chronograf
+
+First of all download, install and run the program. Then start the server and connect the web browser: `http://localhost:8888` and finally connect the raspberry using the IP or the host name.
