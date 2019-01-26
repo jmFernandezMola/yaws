@@ -4,7 +4,7 @@ import time
 import datetime
 from plotDataEInk import plotData 
 from statistics import mean 
-import rfc3339 
+from rfc3339 import rfc3339 
 import json
 
 SAMPLE_EVERY_SECONDS = 10
@@ -12,7 +12,8 @@ REGISTERS_TO_KEEP = 720
 TEMPERATURE_HYSTERESIS = 0.2
 PRESSURE_HYSTERESIS = 0.05
 RELATIVE_HUMIDITY_HYSTERESIS = 0.5
-DISPLAY_EVERY_X_SAMPLES = 60  
+DISPLAY_EVERY_X_SAMPLES = 60
+DATA_BASE_NAME = 'weatherDataBase'
 
 temp_table = [0]*REGISTERS_TO_KEEP
 hum_table = [0]*REGISTERS_TO_KEEP
@@ -24,16 +25,23 @@ pres_tendency = " ="
 first_data_available = False
 
 #Init database
+time.sleep(30) #Wait for global initialization
 from influxdb import InfluxDBClient
 try:
 	client = InfluxDBClient(host='localhost', port=8086)
 except:
 	raise NameError('The service is not running! -> sudo service influxdb start')
-try:
-	client.switch_database('weatherDataBase')
-except:
-	client.create_database('weatherDataBase')
-	client.switch_database('weatherDataBase')
+
+dataBaseExistance = False
+for elements in client.get_list_database():
+    if DATA_BASE_NAME in elements["name"]:
+	dataBaseExistance = True
+
+if not dataBaseExistance:
+    client.create_database(DATA_BASE_NAME)
+    print "Database created for the first time"
+
+client.switch_database(DATA_BASE_NAME)
 
 print("""Display Temperature, Pressure, Humidity and Gas
 Press Ctrl+C to exit
@@ -138,17 +146,20 @@ try:
 		},
 		"time": timestring,
 		"fields": {
-		    "temperature": sensor.data.temperature
-		    "pressure": sensor.data.pressure
+		    "temperature": sensor.data.temperature,
+		    "pressure": sensor.data.pressure,
 	 	    "humidity": sensor.data.humidity
 		}
 	    }]
 	    print json_body
+	    print "\n"
 
-	if (iterations % 30) == 0: 	   		
+	if (iterations % DISPLAY_EVERY_X_SAMPLES ) == 0: 	   		
 	    plotData(["T: " , '{0:.2f} C'.format(sensor.data.temperature), temp_tendency, 
 	    	    "H: ", '{0:.2f} %'.format(sensor.data.humidity), hum_tendency,
 		    "P: ", '{0:.2f} hPa'.format(sensor.data.pressure), pres_tendency])
+	    client.write_points(json_body)
+	    print ("Data saved")
 	    iterations = 0;
 	
 	
