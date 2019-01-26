@@ -6,6 +6,7 @@ from plotDataEInk import plotData
 from statistics import mean 
 from rfc3339 import rfc3339 
 import json
+from readBME680 import initSensor, readBme680 
 
 SAMPLE_EVERY_SECONDS = 10
 REGISTERS_TO_KEEP = 720
@@ -25,7 +26,7 @@ pres_tendency = " ="
 first_data_available = False
 
 #Init database
-time.sleep(30) #Wait for global initialization
+time.sleep(10) #Wait for global initialization
 from influxdb import InfluxDBClient
 try:
 	client = InfluxDBClient(host='localhost', port=8086)
@@ -43,11 +44,11 @@ if not dataBaseExistance:
 
 client.switch_database(DATA_BASE_NAME)
 
-initSensor()
+sensor = initSensor()
 
 iterations = 0
 
-def calculate_tendency (T,P,H):
+def calculate_tendency (T,H,P):
     global temp_table
     global hum_table
     global pres_table
@@ -95,11 +96,12 @@ def calculate_tendency (T,P,H):
 
 try:
     while True:
-	THP = readBme680
+	THP = readBme680(sensor)
+	print THP
         if not THP:
-	    print("THP sensor is not ready"
+	    print("THP sensor is not ready")
 	else:
-	    calculate_tendency (THP[0],THP[1],THP[2])
+	    calculate_tendency(THP[0],THP[1],THP[2])
 	    timestamp = time.time()
 	    d = datetime.datetime.fromtimestamp(timestamp)
 	    timestring = rfc3339(d, utc=True, use_system_timezone=False)

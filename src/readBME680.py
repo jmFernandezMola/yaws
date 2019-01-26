@@ -2,7 +2,7 @@
 import bme680
 import time
 
-def initSensor:
+def initSensor():
   try:
       sensor = bme680.BME680(bme680.I2C_ADDR_PRIMARY)
   except IOError:
@@ -36,7 +36,8 @@ def initSensor:
 
     if not name.startswith('_'):
       print('{}: {}'.format(name, value))
+  return(sensor)
       
-def readBme680:
+def readBme680(sensor):
   if sensor.get_sensor_data():
-    return([sensor.data.temperature, sensor.data.pressure, sensor.data.humidity]
+    return([sensor.data.temperature, sensor.data.humidity, sensor.data.pressure])
