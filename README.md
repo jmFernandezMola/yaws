@@ -23,4 +23,4 @@ Take a look on the following web: https://www.influxdata.com/blog/getting-starte
 
 ## Chronograf
 
-First of all download, install and run the program. Then start the server and connect the web browser: `http://localhost:8888` and finally connect the raspberry using the IP or the host name.
+The Raspberry is powerful enough to run the chronograf. Just install it with the apt-get command and configure it by accessing with a remote computer. The Chronograf will create a web server and it can be accessed from the same network using a computer. For instance, imagine that a Raspberry running the Chronograf is located in the IP 192.168.1.41. Using a web browser and typing 192.168.1.41:8888 will open the web served by Chronograf.  
