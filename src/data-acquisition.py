@@ -43,43 +43,7 @@ if not dataBaseExistance:
 
 client.switch_database(DATA_BASE_NAME)
 
-print("""Display Temperature, Pressure, Humidity and Gas
-Press Ctrl+C to exit
-""")
-
-try:
-    sensor = bme680.BME680(bme680.I2C_ADDR_PRIMARY)
-except IOError:
-    sensor = bme680.BME680(bme680.I2C_ADDR_SECONDARY)
-
-# These calibration data can safely be commented
-# out, if desired.
-
-print('Calibration data:')
-for name in dir(sensor.calibration_data):
-
-    if not name.startswith('_'):
-        value = getattr(sensor.calibration_data, name)
-
-        if isinstance(value, int):
-            print('{}: {}'.format(name, value))
-
-# These oversampling settings can be tweaked to
-# change the balance between accuracy and noise in
-# the data.
-
-sensor.set_humidity_oversample(bme680.OS_2X)
-sensor.set_pressure_oversample(bme680.OS_4X)
-sensor.set_temperature_oversample(bme680.OS_8X)
-sensor.set_filter(bme680.FILTER_SIZE_3)
-sensor.set_gas_status(bme680.DISABLE_GAS_MEAS)
-
-print('\n\nInitial reading:')
-for name in dir(sensor.data):
-    value = getattr(sensor.data, name)
-
-    if not name.startswith('_'):
-        print('{}: {}'.format(name, value))
+initSensor()
 
 iterations = 0
 
@@ -131,8 +95,11 @@ def calculate_tendency (T,P,H):
 
 try:
     while True:
-        if sensor.get_sensor_data():
-	    calculate_tendency (sensor.data.temperature,sensor.data.pressure,sensor.data.humidity)
+	THP = readBme680
+        if not THP:
+	    print("THP sensor is not ready"
+	else:
+	    calculate_tendency (THP[0],THP[1],THP[2])
 	    timestamp = time.time()
 	    d = datetime.datetime.fromtimestamp(timestamp)
 	    timestring = rfc3339(d, utc=True, use_system_timezone=False)
@@ -146,18 +113,18 @@ try:
 		},
 		"time": timestring,
 		"fields": {
-		    "temperature": sensor.data.temperature,
-		    "pressure": sensor.data.pressure,
-	 	    "humidity": sensor.data.humidity
+		    "temperature": THP[0],
+		    "pressure": THP[1],
+	 	    "humidity": THP[2]
 		}
 	    }]
 	    print json_body
 	    print "\n"
 
 	if (iterations % DISPLAY_EVERY_X_SAMPLES ) == 0: 	   		
-	    plotData(["T: " , '{0:.2f} C'.format(sensor.data.temperature), temp_tendency, 
-	    	    "H: ", '{0:.2f} %'.format(sensor.data.humidity), hum_tendency,
-		    "P: ", '{0:.2f} hPa'.format(sensor.data.pressure), pres_tendency])
+	    plotData(["T: " , '{0:.2f} C'.format(THP[0]), temp_tendency, 
+	    	    "H: ", '{0:.2f} %'.format(THP[1]), hum_tendency,
+		    "P: ", '{0:.2f} hPa'.format(THP[2]), pres_tendency])
 	    client.write_points(json_body)
 	    print ("Data saved")
 	    iterations = 0;
