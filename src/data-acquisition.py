@@ -2,8 +2,7 @@
 import bme680
 import time
 import datetime
-from plotDataEInk import plotData 
-from statistics import mean 
+from plotDataEInk import plotData  
 from rfc3339 import rfc3339 
 import json
 from readBME680 import initSensor, readBme680 
@@ -40,6 +39,10 @@ client.switch_database(DATA_BASE_NAME)
 sensor = initSensor()
 
 def calculate_tendency (T,H,P):
+  global temp_tendency
+  global pres_tendency
+  global hum_tendency
+
   results = client.query('SELECT mean("temperature") AS "mean_temp"  FROM "weatherDataBase"."autogen"."WeatherData" WHERE time > now() - 6h')
   temp_mean = results.raw["series"][0]["values"][0][1]
   results = client.query('SELECT mean("humidity") AS "mean_hum"  FROM "weatherDataBase"."autogen"."WeatherData" WHERE time > now() - 6h')
