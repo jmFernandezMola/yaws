@@ -61,7 +61,7 @@ def getNewDataPM():
         check = 0
 
         for element in buffer[0:30]:
-    	check += ord(element)
+    	    check += ord(element)
 
         if check != checksum:
             buffer = []
