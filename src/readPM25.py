@@ -4,16 +4,16 @@ import struct
 import RPi.GPIO as GPIO
 
 def getNewDataPM():
-    RESET_PIN = 12
-    SET_PIN = 7
+    RESET_PIN = 18
+    SET_PIN = 4
     ITERATIONS = 30
     PLOT = False
 
     port = serial.Serial("/dev/serial0", baudrate=9600, bytesize=8, parity='N', stopbits=1, timeout=3.0)
     buffer = []
 
-
-    GPIO.setmode(GPIO.BOARD)
+#CHECK PINS FOR NON rp3 b+ version
+    GPIO.setmode(GPIO.BCM)
     GPIO.setup(RESET_PIN, GPIO.OUT, initial=GPIO.LOW)
     GPIO.setup(SET_PIN, GPIO.OUT, initial=GPIO.LOW)
     GPIO.setwarnings(False)
@@ -24,7 +24,7 @@ def getNewDataPM():
     GPIO.output(RESET_PIN, GPIO.HIGH)
     time.sleep(10)
 
-    for X in range(30):
+    for X in range(ITERATIONS):
         data = port.read(32)  # read up to 32 bytes
         data = list(data)
     #    print("read: ", data)          # this is a bytearray type
@@ -87,5 +87,5 @@ def getNewDataPM():
         # print("Buffer ", buffer)
 
     GPIO.output(SET_PIN, GPIO.LOW)
-    GPIO.cleanup()
+    time.sleep(0.5)
     return ([pm10_standard, pm25_standard, pm100_standard])

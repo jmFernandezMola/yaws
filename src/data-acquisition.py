@@ -5,12 +5,14 @@ import datetime
 from plotDataEInk import plotData  
 from rfc3339 import rfc3339 
 import json
-from readBME680 import initSensor, readBme680 
+from readBME680 import initSensor, readBme680
+from readPM25 import getNewDataPM 
 
 SAMPLE_EVERY_SECONDS = 60
 TEMPERATURE_HYSTERESIS = 0.2
 PRESSURE_HYSTERESIS = 0.05
 RELATIVE_HUMIDITY_HYSTERESIS = 0.5
+GET_PM25_EVERY_SECONDS = 600
 DATA_BASE_NAME = 'weatherDataBase'
 
 temp_tendency = " ="
@@ -73,8 +75,12 @@ def calculate_tendency (T,H,P):
   else:
     hum_tendency = " ="
 
+t0 = 0
 try:
     while True:
+	if (time.time()-t0) > GET_PM25_EVERY_SECONDS:
+	    PMs = getNewDataPM()
+	    t0 = time.time() 
 	THP = readBme680(sensor)
 	print THP
         if not THP:
@@ -95,7 +101,10 @@ try:
 		"fields": {
 		    "temperature": THP[0],
 		    "pressure": THP[2],
-	 	    "humidity": THP[1]
+	 	    "humidity": THP[1],
+		    "PM1.0": PMs[0],
+		    "PM2.5": PMs[1],
+		    "PM10": PMs[2]
 		}
 	    }]
 	    print json_body
@@ -103,7 +112,8 @@ try:
             calculate_tendency(THP[0],THP[1],THP[2])		
 	    plotData(["T: " , '{0:.2f} C'.format(THP[0]), temp_tendency, 
 	    	    "H: ", '{0:.2f} %'.format(THP[1]), hum_tendency,
-		    "P: ", '{0:.2f} hPa'.format(THP[2]), pres_tendency])
+		    "P: ", '{0:.2f} hPa'.format(THP[2]), pres_tendency,
+		    "PM1-10: ", '{0}'.format(sum(PMs)), " "])
         time.sleep(SAMPLE_EVERY_SECONDS)
 except KeyboardInterrupt:
     pass
