@@ -18,10 +18,11 @@ def getNewDataPM():
     GPIO.setup(SET_PIN, GPIO.OUT, initial=GPIO.LOW)
     GPIO.setwarnings(False)
 
-    time.sleep(1)
+    time.sleep(0.5)
 
     GPIO.output(SET_PIN, GPIO.HIGH)
     GPIO.output(RESET_PIN, GPIO.HIGH)
+
     time.sleep(10)
 
     for X in range(ITERATIONS):
