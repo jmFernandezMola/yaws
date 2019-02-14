@@ -3,6 +3,7 @@
 
 import smbus
 import time
+from statistics import mean
 
 # COMMANDS
 SI1145_PARAM_QUERY  = 0x80
@@ -125,85 +126,101 @@ SI1145_REG_CHIPSTAT  = 0x30
 
 SI1145_ADDR  = 0x60
 
-def initPeripheral(addr):
-    bus = smbus.SMbus(0)
-    address = addr
+def initPeripheral():
+    bus = smbus.SMBus(1)
     return bus
 
 def readUV():
-    #do something again
-    return
+    return read16(0x2C)
 
 def readIR():
-    #bla bla
-    return
+    return read16(0x24)
 
 def readVisible():
-    return
+    return read16(0x22)
 
 def read16(addr):
-    return
+    global i2c1145
+    return ((i2c1145.read_byte_data(SI1145_ADDR, addr+1)<<8) | i2c1145.read_byte_data(SI1145_ADDR, addr))
 
 def read8(addr):
     global i2c1145
-    return i2c1145.read_byte_data(addr, 0)
+    return i2c1145.read_byte_data(SI1145_ADDR, addr)
 
 def write8(addr,value):
     global i2c1145
-    return i2c1145.write_byte_data(addr, 0, value)
+    return i2c1145.write_byte_data(SI1145_ADDR, addr, value)
     return
 
 def readParam():
     return
 
-def writeParam(value, param):
+def writeParam(param, value):
     write8(SI1145_REG_PARAMWR, value)
     write8(SI1145_REG_COMMAND, param | SI1145_PARAM_SET)
     return read8(SI1145_REG_PARAMRD)
 
 def forceConversion():
     write8(SI1145_REG_COMMAND, SI1145_PSALS_FORCE);
-    return
+    return 
 
-i2c1145 =  initPeripheral(SI1145_ADDR)
+def makeConversion(num_meas):
 #Try read
-id = read8(SI1145_REG_PARTID)
-if (id != 0x45) raise Exception("Ooops, no chip detected!")
+    id = read8(SI1145_REG_PARTID)
+    if (id != 0x45):
+        raise Exception("Ooops, no chip detected!")
 
 # Set UV coef to default:
 
-write8(SI1145_REG_UCOEFF0, 0x7B);
-write8(SI1145_REG_UCOEFF1, 0x6B);
-write8(SI1145_REG_UCOEFF2, 0x01);
-write8(SI1145_REG_UCOEFF3, 0x00);
-
-# write8(SI1145_REG_UCOEFF0, 0x29);
-# write8(SI1145_REG_UCOEFF1, 0x89);
-# write8(SI1145_REG_UCOEFF2, 0x02);
-# write8(SI1145_REG_UCOEFF3, 0x00);
+    write8(SI1145_REG_UCOEFF0, 0x7B);
+    write8(SI1145_REG_UCOEFF1, 0x6B);
+    write8(SI1145_REG_UCOEFF2, 0x01);
+    write8(SI1145_REG_UCOEFF3, 0x00);
 
 # Enable UV, IR and VIS
-writeParam(SI1145_PARAM_CHLIST, SI1145_PARAM_CHLIST_ENUV |
-  SI1145_PARAM_CHLIST_ENALSIR | SI1145_PARAM_CHLIST_ENALSVIS)
+    writeParam(SI1145_PARAM_CHLIST, SI1145_PARAM_CHLIST_ENUV |
+      SI1145_PARAM_CHLIST_ENALSIR | SI1145_PARAM_CHLIST_ENALSVIS)
 
- # Measurement rate for forced
-write8(SI1145_REG_MEASRATE0, 0x0)
-write8(SI1145_REG_MEASRATE1, 0x0)
+# Measurement rate for forced
+    write8(SI1145_REG_MEASRATE0, 0x0)
+    write8(SI1145_REG_MEASRATE1, 0x0)
 
 # Adjust ADC for IR. Use SI1145_PARAM_ADCMUX_SMALLIR in case of overflow
-writeParam(SI1145_PARAM_ALSIRADCMUX, SI1145_PARAM_ADCMUX_LARGEIR)
+    writeParam(SI1145_PARAM_ALSIRADCMUX, SI1145_PARAM_ADCMUX_SMALLIR)
 # fastest clocks, clock div 1
-writeParam(SI1145_PARAM_ALSIRADCGAIN, 0)
+    writeParam(SI1145_PARAM_ALSIRADCGAIN, 0)
 # take 511 clocks to measure
-writeParam(SI1145_PARAM_ALSIRADCOUNTER, SI1145_PARAM_ADCCOUNTER_511CLK)
+    writeParam(SI1145_PARAM_ALSIRADCOUNTER, SI1145_PARAM_ADCCOUNTER_511CLK)
 # in normal range mode
-writeParam(SI1145_PARAM_ALSIRADCMISC, 0)
+    writeParam(SI1145_PARAM_ALSIRADCMISC, 0)
 
 # fastest clocks, clock div 1
-writeParam(SI1145_PARAM_ALSVISADCGAIN, 0)
+    writeParam(SI1145_PARAM_ALSVISADCGAIN, 0)
 # take 511 clocks to measure
-writeParam(SI1145_PARAM_ALSVISADCOUNTER, SI1145_PARAM_ADCCOUNTER_511CLK);
+    writeParam(SI1145_PARAM_ALSVISADCOUNTER, SI1145_PARAM_ADCCOUNTER_511CLK)
 # in normal range mode (not in high sensitivity)
-writeParam(SI1145_PARAM_ALSVISADCMISC, 0);
+#writeParam(SI1145_PARAM_ALSVISADCMISC, SI1145_PARAM_ALSVISADCMISC_VISRANGE)
+    writeParam(SI1145_PARAM_ALSVISADCMISC, 0) #normal range
 
 # Measure now
+    visibleMeasurements = []
+    irMeasurements = []
+    uvMeasurements = []
+    for i in range(num_meas):
+        forceConversion()
+        time.sleep(0.5)
+	visibleMeasurements.append( (readVisible() - 0xFF)/0.282 )
+	irMeasurements.append( (readIR() - 0xFF)/0.244 )
+        uvMeasurements.append( readUV() * 0.01 )
+
+    meanVis = mean(visibleMeasurements)
+    meanIR = mean(irMeasurements)
+    meanUV = mean(uvMeasurements)
+        
+    print("The read value for visible light is {}".format( meanVis))
+    print("The read value for IR light is {}".format( meanIR))
+    print("The read value for UV index is {}\n".format( meanUV ))
+
+i2c1145 =  initPeripheral()
+makeConversion(20)
+
