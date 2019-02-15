@@ -164,7 +164,7 @@ def forceConversion():
     write8(SI1145_REG_COMMAND, SI1145_PSALS_FORCE);
     return 
 
-def makeConversion(num_meas):
+def getLight(num_meas):
 #Try read
     id = read8(SI1145_REG_PARTID)
     if (id != 0x45):
@@ -217,10 +217,12 @@ def makeConversion(num_meas):
     meanIR = mean(irMeasurements)
     meanUV = mean(uvMeasurements)
         
-    print("The read value for visible light is {}".format( meanVis))
-    print("The read value for IR light is {}".format( meanIR))
-    print("The read value for UV index is {}\n".format( meanUV ))
+    #print("The read value for visible light is {}".format( meanVis))
+    #print("The read value for IR light is {}".format( meanIR))
+    #print("The read value for UV index is {}\n".format( meanUV ))
+
+    return([meanVis, meanIR, meanUV])
 
 i2c1145 =  initPeripheral()
-makeConversion(20)
+
 
